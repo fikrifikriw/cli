@@ -15,7 +15,8 @@ export type SupportedPackageManagers =
   | 'cocoapods'
   | 'poetry'
   | 'hex'
-  | 'Unmanaged (C/C++)';
+  | 'Unmanaged (C/C++)'
+  | 'swiftpm';
 
 export enum SUPPORTED_MANIFEST_FILES {
   GEMFILE = 'Gemfile',
@@ -47,6 +48,7 @@ export enum SUPPORTED_MANIFEST_FILES {
   PODFILE = 'Podfile',
   POETRY_LOCK = 'poetry.lock',
   MIX_EXS = 'mix.exs',
+  SWIFT_PACKAGE = 'Package.swift',
 }
 
 export const SUPPORTED_PACKAGE_MANAGER_NAME: {
@@ -68,6 +70,7 @@ export const SUPPORTED_PACKAGE_MANAGER_NAME: {
   cocoapods: 'CocoaPods',
   poetry: 'Poetry',
   hex: 'Hex',
+  swiftpm: 'Swift PM',
   'Unmanaged (C/C++)': 'Unmanaged (C/C++)',
 };
 
@@ -77,6 +80,7 @@ export const GRAPH_SUPPORTED_PACKAGE_MANAGERS: SupportedPackageManagers[] = [
   'yarn',
   'rubygems',
   'poetry',
+  'swiftpm',
 ];
 // For ecosystems with a flat set of libraries (e.g. Python, JVM), one can
 // "pin" a transitive dependency

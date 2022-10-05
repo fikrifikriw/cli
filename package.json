@@ -69,6 +69,7 @@
     "@snyk/gemfile": "1.2.0",
     "@snyk/snyk-cocoapods-plugin": "2.5.2",
     "@snyk/snyk-hex-plugin": "1.1.4",
+    "@snyk/snyk-swiftpm-plugin": "^1.0.2",
     "@types/jest-json-schema": "^6.1.1",
     "@types/marked": "^4.0.0",
     "abbrev": "^1.1.1",
