@@ -315,14 +315,13 @@ export async function runTest(
       throw new DockerImageNotFoundError(root);
     }
 
-    const failedToRunError = new FailedToRunTestError(
+    throw new FailedToRunTestError(
       error.userMessage ||
         error.message ||
         `Failed to test ${projectType} project`,
       error.code,
+      error.innerError,
     );
-    failedToRunError.innerError = error.innerError;
-    throw failedToRunError;
   } finally {
     spinner.clear<void>(spinnerLbl)();
   }
