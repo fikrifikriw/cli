@@ -6,8 +6,9 @@ require (
 	github.com/elazarl/goproxy v0.0.0-20220901064549-fbd10ff4f5a1
 	github.com/elazarl/goproxy/ext v0.0.0-20220901064549-fbd10ff4f5a1
 	github.com/google/uuid v1.3.0
-	github.com/snyk/go-application-framework v0.0.0-20221019092927-568a4d6353c4
+	github.com/snyk/go-application-framework v0.0.0-20221021170832-a2eb401fb4fd
 	github.com/snyk/go-httpauth v0.0.0-20220915135832-0edf62cf8cdd
+	github.com/spf13/cobra v1.6.0
 	github.com/stretchr/testify v1.8.0
 )
 
@@ -18,6 +19,7 @@ require (
 	github.com/golang/mock v1.6.0 // indirect
 	github.com/hashicorp/go-uuid v1.0.3 // indirect
 	github.com/hashicorp/hcl v1.0.0 // indirect
+	github.com/inconshreveable/mousetrap v1.0.1 // indirect
 	github.com/jcmturner/aescts/v2 v2.0.0 // indirect
 	github.com/jcmturner/dnsutils/v2 v2.0.0 // indirect
 	github.com/jcmturner/gofork v1.7.6 // indirect
@@ -28,6 +30,7 @@ require (
 	github.com/mitchellh/mapstructure v1.5.0 // indirect
 	github.com/pelletier/go-toml v1.9.5 // indirect
 	github.com/pelletier/go-toml/v2 v2.0.5 // indirect
+	github.com/pkg/errors v0.9.1 // indirect
 	github.com/pmezard/go-difflib v1.0.0 // indirect
 	github.com/spf13/afero v1.9.2 // indirect
 	github.com/spf13/cast v1.5.0 // indirect

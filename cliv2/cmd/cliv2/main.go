@@ -11,9 +11,10 @@ import (
 	"github.com/snyk/cli/cliv2/internal/constants"
 	"github.com/snyk/cli/cliv2/internal/proxy"
 	"github.com/snyk/cli/cliv2/internal/utils"
-	"github.com/snyk/go-application-framework/pkg/analytics"
 	"github.com/snyk/go-application-framework/pkg/configuration"
+	"github.com/snyk/go-application-framework/pkg/workflow"
 	"github.com/snyk/go-httpauth/pkg/httpauth"
+	"github.com/spf13/cobra"
 )
 
 type EnvironmentVariables struct {
@@ -66,44 +67,78 @@ func main() {
 	os.Exit(errorCode)
 }
 
-func initAnalytics(args []string, config configuration.Configuration) *analytics.Analytics {
-
-	headerFunc := func() http.Header {
-		h := http.Header{}
-
-		authHeader := utils.GetAuthHeader(config)
-		if len(authHeader) > 0 {
-			h.Add("Authorization", authHeader)
-		}
-
-		h.Add("x-snyk-cli-version", cliv2.GetFullVersion())
-		return h
-	}
-
-	cliAnalytics := analytics.New()
-	cliAnalytics.SetVersion(cliv2.GetFullVersion())
-	cliAnalytics.SetCmdArguments(args)
-	cliAnalytics.SetIntegration(config.GetString(configuration.INTEGRATION_NAME), config.GetString(configuration.INTEGRATION_VERSION))
-	cliAnalytics.SetApiUrl(config.GetString(configuration.API_URL))
-	cliAnalytics.AddHeader(headerFunc)
-
-	mappedArguments := utils.ToKeyValueMap(args, "=")
-	if org, ok := mappedArguments["--org"]; ok {
-		cliAnalytics.SetOrg(org)
-	}
-
-	return cliAnalytics
+// main workflow
+func runCommand(cmd *cobra.Command, args []string) error {
+	fmt.Println("runCommand()", cmd)
+	return nil
 }
 
 func MainWithErrorCode(envVariables EnvironmentVariables, args []string) int {
 	var err error
-	config := configuration.New()
 
-	cliAnalytics := initAnalytics(args, config)
+	rootCommand := cobra.Command{
+		Use: "snyk",
+	}
+
+	// create cobra, add global flagset and parse args
+	// create engine
+	// initialize the extensions -> they register themselves at the engine
+	// engine.Init()
+	// update cobra by adding flagset for each workflow
+	// update configuration by adding flagset for each workflow
+	// init associated packages like Analytics ...
+	// use cobra to parse args -> invoke the appropriate command
+
+	config := configuration.New()
+	engine := workflow.NewWorkFlowEngine(config)
+
+	// init engine
+	err = engine.Init()
+	if err != nil {
+		return constants.SNYK_EXIT_CODE_ERROR
+	}
+
+	workflowIdList := engine.GetWorkflows()
+	fmt.Println("workflowIdList:", len(workflowIdList))
+	for i := range workflowIdList {
+		currentId := workflowIdList[i]
+		currentCommandString := workflow.GetCommandFromWorkflowIdentifier(currentId)
+		workflowEntry, _ := engine.GetWorkflow(currentId)
+		workflowOptions := workflowEntry.GetConfigurationOptions()
+		flagset := workflow.FlagsetFromConfigurationOptions(workflowOptions)
+
+		cmd := cobra.Command{
+			Use:  currentCommandString,
+			Args: cobra.MaximumNArgs(1),
+			RunE: runCommand,
+		}
+
+		if flagset != nil {
+			cmd.Flags().AddFlagSet(flagset)
+			config.AddFlagSet(flagset)
+		}
+
+		rootCommand.AddCommand(&cmd)
+
+	}
+
+	// init NetworkAccess
+	networkAccess := engine.GetNetworkAccess()
+	networkAccess.AddHeaderField("x-snyk-cli-version", cliv2.GetFullVersion())
+
+	// init Analytics
+	cliAnalytics := engine.GetAnalytics()
+	cliAnalytics.SetVersion(cliv2.GetFullVersion())
+	cliAnalytics.SetCmdArguments(args)
 	if config.GetBool(configuration.ANALYTICS_DISABLED) == false {
 		defer cliAnalytics.Send()
 	}
 
+	// run the extensible cli
+	err = rootCommand.Execute()
+
+	// ----------------------------------------------------------------
+	// ----------------------------------------------------------------
 	debugLogger := getDebugLogger(args)
 	debugLogger.Println("debug: true")
 
