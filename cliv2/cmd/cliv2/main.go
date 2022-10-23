@@ -23,13 +23,9 @@ type EnvironmentVariables struct {
 	ProxyAuthenticationMechanism httpauth.AuthenticationMechanism
 }
 
-func getDebugLogger(args []string) *log.Logger {
+func getDebugLogger(config configuration.Configuration) *log.Logger {
 	debugLogger := log.New(os.Stderr, "", log.Ldate|log.Ltime|log.Lmicroseconds|log.Lshortfile)
-	debug := utils.Contains(args, "--debug")
-
-	if !debug {
-		debug = utils.Contains(args, "-d")
-	}
+	debug := config.GetBool("debug")
 
 	if !debug {
 		debugLogger.SetOutput(ioutil.Discard)
@@ -80,16 +76,22 @@ func MainWithErrorCode(envVariables EnvironmentVariables, args []string) int {
 		Use: "snyk",
 	}
 
+	rootCommand.PersistentFlags().String("org", "", "")
+	rootCommand.PersistentFlags().BoolP("debug", "d", false, "")
+	rootCommand.ParseFlags(args)
+
 	// create cobra, add global flagset and parse args
 	// create engine
 	// initialize the extensions -> they register themselves at the engine
 	// engine.Init()
 	// update cobra by adding flagset for each workflow
-	// update configuration by adding flagset for each workflow
 	// init associated packages like Analytics ...
 	// use cobra to parse args -> invoke the appropriate command
 
 	config := configuration.New()
+	config.AddFlagSet(rootCommand.Flags())
+	debugLogger := getDebugLogger(config)
+
 	engine := workflow.NewWorkFlowEngine(config)
 
 	// init engine
@@ -98,8 +100,11 @@ func MainWithErrorCode(envVariables EnvironmentVariables, args []string) int {
 		return constants.SNYK_EXIT_CODE_ERROR
 	}
 
+	debugLogger.Println("Organization:", config.GetString(configuration.ORGANIZATION))
+	debugLogger.Println("API:", config.GetString(configuration.API_URL))
+
 	workflowIdList := engine.GetWorkflows()
-	fmt.Println("workflowIdList:", len(workflowIdList))
+	debugLogger.Println("workflowIdList:", len(workflowIdList))
 	for i := range workflowIdList {
 		currentId := workflowIdList[i]
 		currentCommandString := workflow.GetCommandFromWorkflowIdentifier(currentId)
@@ -115,7 +120,6 @@ func MainWithErrorCode(envVariables EnvironmentVariables, args []string) int {
 
 		if flagset != nil {
 			cmd.Flags().AddFlagSet(flagset)
-			config.AddFlagSet(flagset)
 		}
 
 		rootCommand.AddCommand(&cmd)
@@ -139,9 +143,6 @@ func MainWithErrorCode(envVariables EnvironmentVariables, args []string) int {
 
 	// ----------------------------------------------------------------
 	// ----------------------------------------------------------------
-	debugLogger := getDebugLogger(args)
-	debugLogger.Println("debug: true")
-
 	debugLogger.Println("cacheDirectory:", envVariables.CacheDirectory)
 	debugLogger.Println("insecure:", envVariables.Insecure)
 
