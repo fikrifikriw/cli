@@ -5,16 +5,19 @@ import (
 	"io/ioutil"
 	"log"
 	"net/http"
+	"net/url"
 	"os"
 
 	"github.com/snyk/cli/cliv2/internal/cliv2"
 	"github.com/snyk/cli/cliv2/internal/constants"
 	"github.com/snyk/cli/cliv2/internal/proxy"
 	"github.com/snyk/cli/cliv2/internal/utils"
+	"github.com/snyk/go-application-framework/pkg/analytics"
 	"github.com/snyk/go-application-framework/pkg/configuration"
 	"github.com/snyk/go-application-framework/pkg/workflow"
 	"github.com/snyk/go-httpauth/pkg/httpauth"
 	"github.com/spf13/cobra"
+	"github.com/spf13/pflag"
 )
 
 type EnvironmentVariables struct {
@@ -25,7 +28,7 @@ type EnvironmentVariables struct {
 
 func getDebugLogger(config configuration.Configuration) *log.Logger {
 	debugLogger := log.New(os.Stderr, "", log.Ldate|log.Ltime|log.Lmicroseconds|log.Lshortfile)
-	debug := config.GetBool("debug")
+	debug := config.GetBool(configuration.DEBUG)
 
 	if !debug {
 		debugLogger.SetOutput(ioutil.Discard)
@@ -69,6 +72,17 @@ func runCommand(cmd *cobra.Command, args []string) error {
 	return nil
 }
 
+func sendAnalytics(analytics analytics.Analytics, debugLogger *log.Logger) {
+	debugLogger.Println("Sending Analytics")
+
+	_, err := analytics.Send()
+	if err == nil {
+		debugLogger.Println("Analytics sucessfully send")
+	} else {
+		debugLogger.Println("Failed to send Analytics", err)
+	}
+}
+
 func MainWithErrorCode(envVariables EnvironmentVariables, args []string) int {
 	var err error
 
@@ -76,8 +90,13 @@ func MainWithErrorCode(envVariables EnvironmentVariables, args []string) int {
 		Use: "snyk",
 	}
 
-	rootCommand.PersistentFlags().String("org", "", "")
-	rootCommand.PersistentFlags().BoolP("debug", "d", false, "")
+	globalFLags := pflag.NewFlagSet("global", pflag.ContinueOnError)
+	globalFLags.String(configuration.ORGANIZATION, "", "")
+	globalFLags.BoolP(configuration.DEBUG, "d", false, "")
+	globalFLags.Bool(configuration.INSECURE_HTTPS, false, "")
+	globalFLags.Bool("proxy-noauth", false, "")
+
+	rootCommand.PersistentFlags().AddFlagSet(globalFLags)
 	rootCommand.ParseFlags(args)
 
 	// create cobra, add global flagset and parse args
@@ -90,6 +109,11 @@ func MainWithErrorCode(envVariables EnvironmentVariables, args []string) int {
 
 	config := configuration.New()
 	config.AddFlagSet(rootCommand.Flags())
+
+	if noProxyAuth, _ := rootCommand.Flags().GetBool("proxy-noauth"); noProxyAuth {
+		config.Set(configuration.PROXY_AUTHENTICATION_MECHANISM, httpauth.StringFromAuthenticationMechanism(httpauth.NoAuth))
+	}
+
 	debugLogger := getDebugLogger(config)
 
 	engine := workflow.NewWorkFlowEngine(config)
@@ -134,8 +158,14 @@ func MainWithErrorCode(envVariables EnvironmentVariables, args []string) int {
 	cliAnalytics := engine.GetAnalytics()
 	cliAnalytics.SetVersion(cliv2.GetFullVersion())
 	cliAnalytics.SetCmdArguments(args)
+	cliAnalytics.SetApiUrl(config.GetString(configuration.API_URL))
+	cliAnalytics.AddHeader(func() http.Header {
+		url, _ := url.Parse(config.GetString(configuration.API_URL))
+		header := networkAccess.GetDefaultHeader(url)
+		return header
+	})
 	if config.GetBool(configuration.ANALYTICS_DISABLED) == false {
-		defer cliAnalytics.Send()
+		defer sendAnalytics(cliAnalytics, debugLogger)
 	}
 
 	// run the extensible cli

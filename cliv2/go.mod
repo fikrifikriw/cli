@@ -6,7 +6,7 @@ require (
 	github.com/elazarl/goproxy v0.0.0-20220901064549-fbd10ff4f5a1
 	github.com/elazarl/goproxy/ext v0.0.0-20220901064549-fbd10ff4f5a1
 	github.com/google/uuid v1.3.0
-	github.com/snyk/go-application-framework v0.0.0-20221021170832-a2eb401fb4fd
+	github.com/snyk/go-application-framework v0.0.0-20221024162253-bc93902a2b03
 	github.com/snyk/go-httpauth v0.0.0-20220915135832-0edf62cf8cdd
 	github.com/spf13/cobra v1.6.0
 	github.com/stretchr/testify v1.8.0
